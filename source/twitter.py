@@ -7,13 +7,14 @@ auth.set_access_token(TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET)
 api = tweepy.API(auth)
 
 class Tweet():
-    def __init__(self, name, text, images):
+    def __init__(self, name, text, profilePic, images):
         self.name = name
         self.text = text
         self.images = images
+        self.profilePic = profilePic
     
     def json(self):
-        return {"name": self.name, "text": self.text, "images": self.images}
+        return {"name": self.name, "text": self.text, "images": self.images, 'profilePic':self.profilePic}
         
         
 class Twitter():
@@ -27,10 +28,11 @@ class Twitter():
         text = tweet.text
         name = tweet.user.screen_name
         images = []
+        profilePic = tweet.user.profile_image_url.replace('_normal', '')
         if 'media' in tweet.entities:
             for image in  tweet.entities['media']:
                 if (image['type'] == 'photo'):
                     images.append(image['media_url'])
-        return Tweet(name,text,images)
+        return Tweet(name,text,profilePic,images)
 
 
