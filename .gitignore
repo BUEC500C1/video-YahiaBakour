@@ -2,3 +2,4 @@
 google_application_credentials.json
 source/config.py
 images_created/*
+*/static/*
