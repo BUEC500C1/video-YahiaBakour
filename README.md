@@ -22,6 +22,14 @@ python3 app.py
 curl http://0.0.0.0:8000/user\?twittername\=Reuters
 ```
 
+## Background Info
+- When the /user endpoint is hit, i produce a hash to identify the end video created and immediately return it, in the meantime i spawn a thread that goes to work and creates the images then video
+- All images are created in parallel with as many threads as needed 
+- Immediately aggregate images to video
+- if endpoint for viewing video is hit, then either return the video or return that the video isnt ready yet
+- profit ???
+
+
 
 ### Prerequisites
 
@@ -51,7 +59,6 @@ pip3 install -r requirements.txt
 ## Running the tests
 
 ```
-export GOOGLE_APPLICATION_CREDENTIALS="google_application_credentials.json"
 python3 tests/unitTests.py
 ```
 
