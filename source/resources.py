@@ -11,8 +11,20 @@ import time
 from utility import getImage
 from io import BytesIO
 from subprocess import Popen
-import random
+from multiprocessing import Queue, current_process
 
+# queue stuff
+work_queue = Queue()
+def workDispatcher(process_pool):
+    while True:
+        videoId, userTwitterHandle  = work_queue.get()
+        process_pool.apply_async(createVideo, args=(userTwitterHandle, videoId))
+
+def addToQueue(videoId,TwitterHandle):
+    work_queue.put((videoId,TwitterHandle))
+
+
+# directory creation
 def createLocalDir(path):
     try:
         os.mkdir(path)
@@ -21,6 +33,19 @@ def createLocalDir(path):
     else:
         print ("Successfully created the directory %s " % path)
     return True
+
+
+def createNecessaryDirectories(twitterName,Hash):
+    # create necessary directories
+    createLocalDir(os.getcwd()+ "/source/static/")
+    createLocalDir(os.getcwd()+ "/source/static/video_generated")
+    path = os.getcwd()+ "/images_created"
+    createLocalDir(path)
+    path = path + '/' + Hash + '/'
+    createLocalDir(path)
+    path = path + '/' + twitterName + '/'
+    createLocalDir(path)
+    return path
 
 # Taken From : https://stackoverflow.com/a/22336005
 def makeCircular(crop_img):
@@ -59,15 +84,6 @@ def generateImage(name,text,pic,imageIdx,path):
     image.save(path+"image"+str(imageIdx)+'.png')
     return True
 
-def createNecessaryDirectories(twitterName):
-    # create necessary directories
-    createLocalDir(os.getcwd()+ "/source/static/video_generated")
-    path = os.getcwd()+ "/images_created"
-    createLocalDir(path)
-    path = path + '/' + twitterName + '/'
-    createLocalDir(path)
-    return path
-
 def createThreadsForProducingImages(feed,path):
     threads = []
     imageIdx = 0
@@ -77,27 +93,23 @@ def createThreadsForProducingImages(feed,path):
     return threads
 
 def convert_images_to_video(image_path, video_id):
-    cmd = 'ffmpeg -r 1 -i '+image_path+'/image%d.png -vcodec mpeg4 -y ./source/static/video_generated/'+video_id+'.mp4'
+    cmd = 'ffmpeg -r 1 -i '+image_path+'/image%d.png -preset ultrafast -r 1/3 -y ./source/static/video_generated/'+video_id+'.ogg'
     os.system(cmd)
+    return True
 
+def createVideo(twitterName,hashCreated):
+    twitterObj = Twitter(twitterName)
+    path = createNecessaryDirectories(twitterName,hashCreated)
+    threads = createThreadsForProducingImages(twitterObj.feed,path)
 
+    # start threads
+    for thread in threads:
+        thread.start()
 
-class TwitterFeedVideoMaker(Resource):
-    @use_args({"twittername": fields.Str(required=True)})
-    def get(self,args):
-        twitterObj = Twitter(args['twittername'])
-        path = createNecessaryDirectories(args['twittername'])
-        threads = createThreadsForProducingImages(twitterObj.feed,path)
-        hashCreated = str(random.getrandbits(32))
+    # join threads
+    for thread in threads:
+        thread.join()
 
-        # start threads
-        for thread in threads:
-            thread.start()
+    convert_images_to_video(path,hashCreated)
 
-        # join threads
-        for thread in threads:
-            thread.join()
-
-        convert_images_to_video(path,hashCreated)
-
-        return 'http://127.0.0.1:5000/video/' + hashCreated + '.mp4'
+    return True
